@@ -1,0 +1,43 @@
+# Секреты — никогда в git
+ops/.env
+.env
+*.pem
+*.key
+
+# Веса модели и то, что аналитик наработал.
+# Код аналитика (LLM/analyst/) в git входит — веса, индекс, память и
+# отчёты нет: гигабайты весов и ежедневно меняющееся состояние
+# превратили бы историю репозитория в свалку.
+LLM/*.gguf
+LLM/state/
+LLM/reports/
+
+# Локальное у аналитика: путь к весам свой на каждой машине,
+# а эталон качества нарабатывается прогоном. Образцы рядом — *.example.
+LLM/analyst.json
+LLM/eval/golden.json
+
+# Данные
+data/
+research/data/
+research/runs/
+research/reports/
+*.jsonl.gz
+*.parquet
+bybit_candidates.csv
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Прочее
+.market_cache.json
+.DS_Store
+Thumbs.db
+
+# Кэш компилятора Kotlin. Локальный, как и .gradle рядом с ним.
+android/.kotlin/

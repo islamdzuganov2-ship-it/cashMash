@@ -1,0 +1,49 @@
+# Тестовый контур. Боевой профиль — config/mainnet_micro.yaml
+exchange:
+  testnet: true
+  category: linear
+  symbol: XRPUSDT
+  recv_window_ms: 5000
+
+runtime:
+  mode: SIGNAL_ONLY      # LIVE включается осознанно, после гейта 1
+  strategy_id: cm1
+  warmup_sec: 120
+  loop_interval_ms: 250
+
+economics:
+  fee_maker_bps: "2.0"
+  fee_taker_bps: "5.5"
+  cost_gate_k_size: "3"
+  min_net_edge_bps: "5"
+  assumed_win_rate: "0.50"
+  max_spread_bps: "5"
+  panic_spread_bps: "20"
+
+session:
+  enabled: true
+  windows_utc: ["13:00-19:00"]   # из docs/24-Movement-Study
+
+risk:
+  mode: FIXED_NOTIONAL
+  risk_per_trade_pct: "0.3"
+  max_stop_width_bps: "100"
+  max_real_leverage: "3"
+  margin_mode: ISOLATED
+  max_open_positions: 1
+  max_daily_loss_pct: "2"
+  max_daily_trades: 30
+  max_consec_losses: 5
+
+trade:
+  sl_target_bps: "20"
+  rr: "2.5"
+  entry_order: POST_ONLY
+  post_only_offset_bps: "1.0"
+  time_stop_soft_sec: 600
+  time_stop_hard_sec: 1200
+
+telemetry:
+  log_level: DECISION
+  db_path: data/state.db
+  alerts_dir: data/alerts

@@ -1,0 +1,15 @@
+[project]
+name = "cashmash"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["websockets>=12", "requests>=2.31", "pydantic>=2.6", "pyyaml>=6"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "research"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src/cashmash"]

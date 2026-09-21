@@ -1,0 +1,37 @@
+# Концы строк.
+#
+# На машине разработчика стоит core.autocrlf=true, и без этого файла git
+# выдавал бы при выгрузке CRLF ВСЕМУ подряд. Для Python это безразлично,
+# а для скриптов с shebang — нет: ядро Linux читает первую строку целиком
+# и ищет интерпретатор по имени "/bin/sh\r", которого не существует.
+# Ломается это ровно там, где чинить дороже всего — на чужой машине при
+# сборке APK и на телефоне в Termux.
+#
+# Поэтому: в репозитории всегда LF, при выгрузке — тоже LF, и лишь тем
+# файлам, которые исполняет Windows, возвращается CRLF.
+
+* text=auto eol=lf
+
+# Исполняются cmd.exe и PowerShell — им нужен CRLF.
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+
+# Двоичное. Перечислено явно, чтобы ни одна эвристика не попыталась
+# «поправить» здесь перевод строки.
+*.png       binary
+*.jpg       binary
+*.jar       binary
+*.gguf      binary
+*.jks       binary
+*.keystore  binary
+*.db        binary
+*.parquet   binary
+
+# Язык репозитория на GitHub определяется по коду робота, а не по
+# сгенерированной обвязке Gradle и не по объёму документации.
+android/gradlew        linguist-vendored
+android/gradlew.bat    linguist-vendored
+android/gradle/**      linguist-vendored
+archive/**             linguist-vendored
+docs/**                linguist-documentation

@@ -1,0 +1,4 @@
+websockets>=17.0
+requests>=2.32
+pydantic>=2.6
+PyYAML>=6.0

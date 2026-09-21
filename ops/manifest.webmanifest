@@ -1,0 +1,36 @@
+{
+  "name": "CashMash — панель робота",
+  "short_name": "CashMash",
+  "description": "Что робот видит и решает прямо сейчас: цена, стакан, лента, путь к сделке, виртуальная торговля и новостной фон.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d0d0d",
+  "theme_color": "#1a1a19",
+  "lang": "ru",
+  "dir": "ltr",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Путь к сделке",
+      "short_name": "Решение",
+      "description": "Почему робот сейчас не торгует",
+      "url": "/#gates",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Виртуальная торговля",
+      "short_name": "Самопроверка",
+      "description": "Допущения против реальности",
+      "url": "/#paper",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

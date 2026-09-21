@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            style="@style/SectionTitle"
+            android:text="@string/settings_instrument" />
+
+        <TextView
+            style="@style/Label"
+            android:text="@string/settings_symbol" />
+
+        <EditText
+            android:id="@+id/symbol"
+            style="@style/Field"
+            android:hint="@string/settings_symbol"
+            android:inputType="textCapCharacters"
+            android:autofillHints="" />
+
+        <TextView
+            style="@style/Label"
+            android:text="@string/settings_bar_sec" />
+
+        <EditText
+            android:id="@+id/barSec"
+            style="@style/Field"
+            android:hint="@string/settings_bar_sec"
+            android:inputType="number"
+            android:autofillHints="" />
+
+        <TextView
+            style="@style/Hint"
+            android:text="@string/settings_bar_sec_note" />
+
+        <TextView
+            style="@style/SectionTitle"
+            android:text="@string/settings_services" />
+
+        <TextView
+            android:id="@+id/servicesNote"
+            style="@style/Hint"
+            android:text="@string/settings_services_note" />
+
+        <LinearLayout
+            android:id="@+id/services"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            style="@style/SectionTitle"
+            android:text="@string/settings_panel" />
+
+        <TextView
+            style="@style/Label"
+            android:text="@string/settings_port" />
+
+        <EditText
+            android:id="@+id/port"
+            style="@style/Field"
+            android:hint="@string/settings_port"
+            android:inputType="number"
+            android:autofillHints="" />
+
+        <CheckBox
+            android:id="@+id/lan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_lan" />
+
+        <TextView
+            style="@style/Hint"
+            android:text="@string/settings_lan_note" />
+
+        <TextView
+            android:id="@+id/lanUrlLabel"
+            style="@style/Label"
+            android:text="@string/settings_lan_url" />
+
+        <TextView
+            android:id="@+id/lanUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:fontFamily="monospace"
+            android:textSize="12sp"
+            android:textColor="@color/accent"
+            android:textIsSelectable="true" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/lanCopy"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_lan_copy" />
+
+            <Button
+                android:id="@+id/lanRenew"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/settings_lan_renew" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/SectionTitle"
+            android:text="@string/settings_telegram" />
+
+        <TextView
+            style="@style/Hint"
+            android:text="@string/settings_telegram_note" />
+
+        <TextView
+            style="@style/Label"
+            android:text="@string/settings_tg_token" />
+
+        <EditText
+            android:id="@+id/tgToken"
+            style="@style/Field"
+            android:hint="@string/settings_tg_token"
+            android:inputType="textPassword"
+            android:autofillHints="" />
+
+        <TextView
+            style="@style/Label"
+            android:text="@string/settings_tg_chat" />
+
+        <EditText
+            android:id="@+id/tgChat"
+            style="@style/Field"
+            android:hint="@string/settings_tg_chat"
+            android:inputType="text"
+            android:autofillHints="" />
+
+        <TextView
+            style="@style/SectionTitle"
+            android:text="@string/settings_startup" />
+
+        <CheckBox
+            android:id="@+id/autostart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_autostart" />
+
+        <TextView
+            style="@style/Hint"
+            android:text="@string/settings_autostart_note" />
+
+        <TextView
+            style="@style/SectionTitle"
+            android:text="@string/settings_network" />
+
+        <CheckBox
+            android:id="@+id/unmeteredOnly"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_unmetered_only" />
+
+        <TextView
+            style="@style/Hint"
+            android:text="@string/settings_unmetered_only_note" />
+
+        <TextView
+            style="@style/SectionTitle"
+            android:text="@string/settings_storage" />
+
+        <TextView
+            android:id="@+id/rawNow"
+            style="@style/Hint"
+            android:text="@string/settings_storage" />
+
+        <TextView
+            style="@style/Label"
+            android:text="@string/settings_raw_limit" />
+
+        <EditText
+            android:id="@+id/rawLimit"
+            style="@style/Field"
+            android:hint="@string/settings_raw_limit"
+            android:inputType="number"
+            android:autofillHints="" />
+
+        <TextView
+            style="@style/Hint"
+            android:text="@string/settings_raw_limit_note" />
+
+        <TextView
+            style="@style/SectionTitle"
+            android:text="@string/settings_logs" />
+
+        <TextView
+            style="@style/Hint"
+            android:text="@string/settings_logs_note" />
+
+        <Button
+            android:id="@+id/openLogs"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/logs_open" />
+
+        <Button
+            android:id="@+id/save"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/settings_save" />
+
+        <TextView
+            style="@style/Hint"
+            android:layout_marginTop="16dp"
+            android:text="@string/settings_disclaimer" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ru" data-palette="#2a78d6,#e34948,#1baf7a">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover обязателен для iPhone с вырезом: без него
+     система оставляет белые поля сверху и снизу, и приложение
+     выглядит как страница в браузере, а не как приложение. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CashMash</title>
+
+<!-- Установка на домашний экран -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
+
+<!-- iOS манифест не читает: полноэкранный режим, статус-бар и иконка
+     задаются отдельными тегами, иначе Safari откроет обычную вкладку. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CashMash">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+/* ──────────────────────────────────────────────────────────────
+   Палитра. Роли, а не hex: светлая и тёмная темы меняются
+   в одном месте. Тёмные значения объявлены дважды — под
+   системной настройкой и под переключателем темы.
+   ────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+  --plane:      #f9f9f7;
+  --surface:    #fcfcfb;
+  --ink:        #0b0b0b;
+  --ink-2:      #52514e;
+  --ink-muted:  #898781;
+  --grid:       #e1e0d9;
+  --baseline:   #c3c2b7;
+  --border:     rgba(11,11,11,0.10);
+
+  --good:       #0ca30c;
+  --warning:    #fab219;
+  --serious:    #ec835a;
+  --critical:   #d03b3b;
+
+  --buy:        #2a78d6;   /* дивергентная пара: покупка ↔ продажа */
+  --sell:       #e34948;
+  --neutral:    #f0efec;
+  --accent:     #2a78d6;
+
+  --radius: 10px;
+  --gap: 14px;
+  /* Поле страницы — переменной: его знает не только body, но и липкий
+     переключатель вкладок, который обязан перекрыть края. */
+  --pad: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plane: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
+    --grid: #2c2c2a; --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --buy: #3987e5; --sell: #e66767; --neutral: #383835; --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane: #0d0d0d; --surface: #1a1a19;
+  --ink: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
+  --grid: #2c2c2a; --baseline: #383835;
+  --border: rgba(255,255,255,0.10);
+  --buy: #3987e5; --sell: #e66767; --neutral: #383835; --accent: #3987e5;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Безопасные зоны: вырез сверху и полоса жеста снизу на iPhone.
+     Без них шапка уезжает под «чёлку», а подвал — под полосу. */
+  padding: calc(var(--pad) + env(safe-area-inset-top))
+           calc(var(--pad) + env(safe-area-inset-right))
+           calc(var(--pad) + env(safe-area-inset-bottom))
+           calc(var(--pad) + env(safe-area-inset-left));
+  /* На телефоне страница не должна «оттягиваться» и подпрыгивать:
+     панель обновляется сама, и жест обновления только мешает. */
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+}
+/* Выделение текста при долгом нажатии на телефоне мешает прокрутке
+   и ничего не даёт: цифры отсюда не копируют. Поля ввода исключены. */
+@media (pointer: coarse) {
+  body { -webkit-user-select: none; user-select: none;
+         -webkit-tap-highlight-color: transparent; }
+  input, textarea { -webkit-user-select: text; user-select: text; }
+}
+.wrap { max-width: 1280px; margin: 0 auto; }
+
+/* ── шапка ─────────────────────────────────────────────────── */
+header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+         margin-bottom: var(--gap); }
+h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+h1 .sym { color: var(--ink-muted); font-weight: 400; }
+.spacer { flex: 1; }
+button.ghost {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--ink-2); border-radius: 8px; padding: 5px 11px;
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+button.ghost:hover { background: var(--surface); color: var(--ink); }
+
+/* ── карточки ──────────────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+}
+.card h2 {
+  font-size: 13px; margin: 0 0 2px; font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.card .hint { font-size: 12px; color: var(--ink-muted); margin: 0 0 12px; }
+
+/* ── подключение биржи ─────────────────────────────────────── */
+.conn-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.conn-line .key { font-variant-numeric: tabular-nums; font-weight: 600; }
+.conn-form { display: grid; gap: 8px; max-width: 430px; }
+.conn-form label { font-size: 12px; color: var(--ink-2); }
+.conn-form input[type="text"], .conn-form input[type="password"] {
+  width: 100%; background: var(--plane); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font: inherit; font-size: 13px;
+}
+.conn-form input:focus { outline: 1px solid var(--accent); }
+.conn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.conn-note { font-size: 12px; color: var(--ink-muted); }
+.conn-bad { color: var(--sell); font-size: 13px; }
+.conn-warn { color: #d9a441; font-size: 12px; }
+.conn-ok { color: var(--buy); font-size: 13px; }
+.conn-steps { font-size: 12px; color: var(--ink-muted); margin: 0 0 10px;
+              padding-left: 18px; }
+.conn-steps li { margin: 2px 0; }
+button.act {
+  background: var(--accent); border: 1px solid var(--accent); color: #fff;
+  border-radius: 8px; padding: 7px 14px; font: inherit; font-size: 13px;
+  cursor: pointer;
+}
+button.act[disabled] { opacity: .5; cursor: default; }
+
+.grid { display: grid; gap: var(--gap); }
+.cols { grid-template-columns: 1fr; }
+/* График — во всю ширину: в половине колонки оси и уровни не читаются. */
+.chart svg { max-height: 320px; }
+
+/* ──────────────────────────────────────────────────────────────
+   АДАПТАЦИЯ ПОД ЭКРАН.
+   Точек перелома четыре, и каждая соответствует не устройству,
+   а моменту, когда вёрстка перестаёт читаться:
+
+     < 560   телефон: одна колонка, всё компактнее, график ниже
+     560-899 планшет вертикально: одна колонка, обычные размеры
+     >= 900  две колонки
+     >= 1500 широкий экран: график и решения рядом
+
+   Привязка к устройствам («это айфон») ломается на первом же
+   планшете в альбомной ориентации; привязка к читаемости — нет.
+   ────────────────────────────────────────────────────────────── */
+
+@media (min-width: 900px) {
+  .cols { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr; }
+}
+
+/* Ниже 1500 px .wide — обычный поток, и зазор между карточками задать
+   некому: сетки, которая его даёт, ещё нет, а своих полей у карточек
+   нет. Без этой строки две карточки слипаются в одну. */
+.wide > * + * { margin-top: var(--gap); }
+
+/* Широкий экран: график и детекторы помещаются рядом. */
+@media (min-width: 1500px) {
+  .wide { display: grid; grid-template-columns: 1.45fr 1fr; gap: var(--gap); }
+  .wide > * { margin-bottom: 0 !important; margin-top: 0 !important; }
+  .chart svg { max-height: 380px; }
+}
+
+/* Телефон. Главное — не уменьшить всё подряд, а убрать то,
+   что на узком экране только мешает: лишние знаки после запятой,
+   плотные сетки, длинные списки. */
+@media (max-width: 559px) {
+  :root { --gap: 10px; --pad: 10px; }
+  .card { padding: 12px 13px; border-radius: 8px; }
+  h1 { font-size: 15px; }
+  .verdict-text strong { font-size: 16px; }
+  .hero .big { font-size: 27px; }
+  .hero .delta { font-size: 13px; }
+  .chart svg { max-height: 210px; }
+  .chips { gap: 6px; }
+  .chip { font-size: 11px; padding: 2px 7px; }
+  /* Значение гейта переносится под название, а не жмёт его. */
+  .gate .head { flex-direction: column; align-items: flex-start; gap: 1px; }
+  .gate .val { text-align: left; }
+  /* Самопроверка: три колонки на телефоне нечитаемы. */
+  .check { grid-template-columns: 1fr; gap: 3px; }
+  .check .cap { display: inline; margin-right: 6px; }
+  .tape { max-height: 190px; }
+  .news-i { grid-template-columns: 14px minmax(0,1fr); }
+  .news-i .meta { grid-column: 2; white-space: normal; }
+  .pstat { gap: 12px; }
+  .pstat b { font-size: 16px; }
+  .eco-legend { gap: 8px; font-size: 11px; }
+  footer { font-size: 11px; }
+  /* Кнопки — пальцем, а не курсором. */
+  button.ghost { padding: 7px 12px; font-size: 12px; }
+}
+
+/* Планшет вертикально: колонка одна, но тесниться незачем. */
+@media (min-width: 560px) and (max-width: 899px) {
+  .check { grid-template-columns: minmax(0,1fr) 1fr; }
+  .check .note { grid-column: 1 / -1; }
+  .chart svg { max-height: 260px; }
+}
+
+/* Экран короткий и широкий (ноутбук в альбомной, телефон боком):
+   высокий график съедает весь экран, и панели под ним не видно. */
+@media (max-height: 560px) and (orientation: landscape) {
+  .chart svg { max-height: 180px; }
+  .tape { max-height: 150px; }
+}
+
+/* ── строка состояния ──────────────────────────────────────── */
+#status { margin-bottom: var(--gap); }
+.verdict { display: flex; gap: 12px; align-items: flex-start; }
+.dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  margin-top: 5px; flex: none;
+}
+.verdict-text strong { font-size: 19px; font-weight: 600; display: block; }
+.verdict-text span { color: var(--ink-2); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.chip {
+  font-size: 12px; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--ink-2);
+  display: inline-flex; gap: 6px; align-items: center;
+}
+.chip b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.chip .mark { font-size: 11px; }
+
+/* ── герой-число ───────────────────────────────────────────── */
+.hero { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.hero .big { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
+.hero .delta { font-size: 15px; font-variant-numeric: tabular-nums; }
+.up { color: var(--good); } .down { color: var(--critical); }
+
+/* ── гейты ─────────────────────────────────────────────────── */
+.gate { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px;
+        padding: 9px 0; border-top: 1px solid var(--grid); align-items: start; }
+.gate:first-of-type { border-top: 0; }
+.gate .ic { font-size: 13px; line-height: 1.5; }
+/* Название и значение — ОДНА строка: длинное значение не должно
+   выдавливать объяснение в колонку шириной в слово. */
+.gate .head { display: flex; justify-content: space-between; gap: 12px;
+              align-items: baseline; }
+.gate .lab { font-weight: 500; }
+.gate .why { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+.gate .val { font-size: 12.5px; color: var(--ink-2); text-align: right;
+             font-variant-numeric: tabular-nums; flex: none; }
+.gate.blocked .lab { color: var(--ink); }
+.gate.blocked { background: color-mix(in srgb, var(--warning) 7%, transparent);
+                margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+
+/* ── детекторы: дивергентные полосы ────────────────────────── */
+.det { padding: 9px 0; border-top: 1px solid var(--grid); }
+.det:first-child { border-top: 0; }
+.det .row { display: flex; justify-content: space-between; gap: 10px;
+            align-items: baseline; }
+.det .name { font-weight: 500; }
+.det .num { font-variant-numeric: tabular-nums; font-size: 12.5px;
+            color: var(--ink-2); }
+.det .why { font-size: 12px; color: var(--ink-muted); margin-top: 1px; }
+/* Дорожка обязана быть видна на фоне карточки: незаметная дорожка
+   превращает «голос ноль» в «элемента нет». */
+.bar { position: relative; height: 8px; margin-top: 7px;
+       background: var(--grid); border-radius: 4px; }
+.bar .mid { position: absolute; left: 50%; top: -2px; bottom: -2px;
+            width: 1px; background: var(--baseline); }
+.bar .fill { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+.det.silent .name, .det.silent .num { color: var(--ink-muted); }
+.det.silent .bar { opacity: 0.6; }
+
+/* ── стакан ────────────────────────────────────────────────── */
+.ladder { font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.lvl { position: relative; display: flex; justify-content: space-between;
+       padding: 2px 6px; margin-bottom: 2px; border-radius: 3px; }
+.lvl .qty { color: var(--ink-2); z-index: 1; }
+.lvl .px { z-index: 1; font-weight: 500; }
+.lvl .wash { position: absolute; top: 0; bottom: 0; right: 0; border-radius: 3px; }
+.lvl.ask .wash { background: color-mix(in srgb, var(--sell) 18%, transparent); }
+.lvl.bid .wash { background: color-mix(in srgb, var(--buy) 18%, transparent); }
+.lvl.ask .px { color: var(--sell); } .lvl.bid .px { color: var(--buy); }
+.mid-row { display: flex; justify-content: space-between; align-items: baseline;
+           padding: 7px 6px; margin: 4px 0; border-top: 1px solid var(--grid);
+           border-bottom: 1px solid var(--grid); }
+.mid-row b { font-size: 15px; }
+
+/* ── лента ─────────────────────────────────────────────────── */
+.tape { font-variant-numeric: tabular-nums; font-size: 12.5px;
+        max-height: 268px; overflow: auto; }
+.tape .t { display: grid; grid-template-columns: 62px 1fr auto;
+           gap: 8px; padding: 2px 0; }
+.tape .t.buy .p { color: var(--buy); } .tape .t.sell .p { color: var(--sell); }
+.tape .tm { color: var(--ink-muted); }
+.tape .v { color: var(--ink-2); }
+
+.news-i { display: grid; grid-template-columns: 16px minmax(0,1fr) auto;
+           gap: 10px; padding: 7px 0; border-top: 1px solid var(--grid);
+           align-items: baseline; }
+.news-i:first-child { border-top: 0; }
+.news-i a { color: var(--ink); text-decoration: none; }
+.news-i a:hover { text-decoration: underline; }
+.news-i .meta { font-size: 11.5px; color: var(--ink-muted);
+                font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── самопроверка ──────────────────────────────────────────── */
+.check { display: grid; grid-template-columns: minmax(0,1.3fr) 1fr 1fr;
+         gap: 10px; padding: 9px 0; border-top: 1px solid var(--grid);
+         align-items: baseline; }
+.check:first-child { border-top: 0; }
+.check .lab { font-weight: 500; }
+.check .note { font-size: 12px; color: var(--ink-muted); margin-top: 2px;
+               grid-column: 1 / -1; }
+.check .cap { font-size: 11px; color: var(--ink-muted); display: block; }
+.check .v { font-variant-numeric: tabular-nums; }
+.check .v.real { font-weight: 600; }
+.pstat { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px;
+         font-size: 13px; }
+.pstat b { display: block; font-size: 19px; font-weight: 600;
+           font-variant-numeric: tabular-nums; }
+.pstat span { color: var(--ink-muted); font-size: 12px; }
+
+/* ── экономика ─────────────────────────────────────────────── */
+.eco { display: grid; gap: 10px; }
+.eco-bar { display: flex; height: 26px; border-radius: 6px; overflow: hidden;
+           background: var(--neutral); }
+.eco-bar span { display: flex; align-items: center; justify-content: center;
+                font-size: 11px; color: #fff; white-space: nowrap; }
+.eco-bar span + span { border-left: 2px solid var(--surface); }
+.eco-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px;
+              color: var(--ink-2); }
+.eco-legend i { display: inline-block; width: 9px; height: 9px;
+                border-radius: 2px; margin-right: 5px; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px;
+      font-size: 13px; }
+.kv dt { color: var(--ink-2); } .kv dd { margin: 0; text-align: right;
+      font-variant-numeric: tabular-nums; font-weight: 500; }
+
+/* ── график ────────────────────────────────────────────────── */
+.chart { position: relative; }
+/* Высота задана в viewBox, а не растяжением: при preserveAspectRatio
+   none подписи осей перекашивает вместе с холстом. */
+.chart svg { display: block; width: 100%; height: auto; }
+.ax { font-size: 11px; fill: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.axisline { stroke: var(--baseline); stroke-width: 1; }
+.lvl-label { font-size: 10.5px; font-weight: 600;
+             font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px;
+          font-size: 12px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 14px; height: 0;
+            border-top-width: 2px; margin-right: 6px;
+            vertical-align: middle; }
+.tip { position: absolute; pointer-events: none; background: var(--surface);
+       border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+       font-size: 12px; font-variant-numeric: tabular-nums; opacity: 0;
+       transition: opacity .1s; white-space: nowrap; z-index: 5; }
+
+.empty { color: var(--ink-muted); font-size: 13px; padding: 10px 0; }
+footer { color: var(--ink-muted); font-size: 12px; margin-top: 18px;
+         display: flex; gap: 12px; flex-wrap: wrap; }
+.beginner .pro { display: none; }
+
+/* Отчёт аналитика. Высота ограничена и прокручивается внутри: отчёт
+   бывает на несколько экранов, и без ограничения он выталкивает
+   остальные карточки за пределы страницы. */
+/* min-height здесь не украшение, а страховка. Единицы vh считаются от
+   высоты окна, а она не везде известна: во встроенном просмотрщике и
+   в WebView Android-приложения `innerHeight` бывает нулём, и тогда
+   `62vh` превращается в `0px` — отчёт схлопывается до одних полей, а
+   выглядит это как «панель сломалась». По правилам CSS min-height
+   сильнее max-height, поэтому при нулевом vh остаётся 240px с
+   прокруткой: некрасиво, но читаемо. */
+.an-report { margin-top: 14px; padding: 14px 16px; background: var(--bg);
+             border: 1px solid var(--border); border-radius: 8px;
+             max-height: 62vh; min-height: 240px;
+             overflow-y: auto; font-size: 13px; line-height: 1.55; }
+.an-report p { margin: 0 0 9px; }
+.an-report h3.an-h { font-size: 15px; margin: 16px 0 8px;
+                     padding-bottom: 5px; border-bottom: 1px solid var(--grid); }
+.an-report h4.an-h { font-size: 13px; margin: 14px 0 6px; color: var(--ink-2); }
+.an-report h5.an-h, .an-report h6.an-h { font-size: 12px; margin: 12px 0 5px;
+                     color: var(--ink-muted); text-transform: uppercase;
+                     letter-spacing: .04em; }
+.an-report ul.an-list { margin: 0 0 10px; padding-left: 18px; }
+.an-report ul.an-list li { margin: 0 0 7px; }
+.an-report blockquote { margin: 0 0 12px; padding: 9px 12px;
+             border-left: 3px solid var(--accent); background: var(--surface);
+             border-radius: 0 6px 6px 0; color: var(--ink-2); }
+.an-report code { font-size: 12px; }
+.an-report s { color: var(--ink-muted); }
+/* ──────────────────────────────────────────────────────────────
+   ВКЛАДКИ.
+
+   Три вкладки — три разных вопроса, и смешаны в одну ленту они были
+   зря: «что на рынке», «что с деньгами» и «что показала проверка»
+   читаются в разное время и с разным настроением. На телефоне одна
+   лента из двенадцати карточек означала прокрутку до нужной.
+
+   Переключатель липкий: карточки длинные, и возвращаться к нему
+   прокруткой вверх после каждой пришлось бы постоянно. Отрицательные
+   поля по краям — чтобы при прокрутке под него не подтекало
+   содержимое в отступах страницы.
+   ────────────────────────────────────────────────────────────── */
+.tabs {
+  position: sticky; top: env(safe-area-inset-top); z-index: 20;
+  margin: 0 calc(-1 * var(--pad)) var(--gap);
+  padding: 4px var(--pad) 10px;
+  background: var(--plane);
+  box-shadow: 0 10px 10px -12px rgba(0, 0, 0, 0.35);
+}
+.seg { display: flex; gap: 4px; }
+.seg button {
+  flex: 1; background: transparent; border: 1px solid transparent;
+  color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 500;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  white-space: nowrap; display: flex; align-items: center;
+  justify-content: center; gap: 6px;
+}
+.seg button:hover { color: var(--ink); }
+.seg button.on {
+  background: var(--surface); border-color: var(--border); color: var(--ink);
+}
+.seg .mark { font-size: 15px; line-height: 1; }
+.tab { display: none; }
+.tab.on { display: block; }
+
+/* ──────────────────────────────────────────────────────────────
+   КОШЕЛЁК.
+
+   Главное число страницы стоит первым и набрано крупнее всего:
+   всё остальное на панели — объяснение к нему. Рядом с числом
+   обязаны стоять две вещи: КАКОЙ это счёт (боевой или тестовый) и
+   ОТКУДА число взялось. Баланс без происхождения — самая опасная
+   строка панели: трёхчасовой давности он выглядит как «сейчас».
+   ────────────────────────────────────────────────────────────── */
+.wallet .top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.wallet .cap { font-size: 12px; color: var(--ink-muted); width: 100%; }
+.wallet .big {
+  font-size: 36px; font-weight: 600; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums; line-height: 1.05;
+}
+.wallet .unit { font-size: 15px; color: var(--ink-2); }
+.wallet .day { text-align: right; font-variant-numeric: tabular-nums; }
+.wallet .day b { display: block; font-size: 18px; font-weight: 600; }
+.wallet .day span { font-size: 11px; color: var(--ink-muted); }
+.wallet .when { font-size: 12px; color: var(--ink-muted); margin-top: 7px; }
+.badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap;
+}
+.badge.live { color: var(--good);
+              border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.badge.real { color: var(--critical);
+              border-color: color-mix(in srgb, var(--critical) 45%, transparent); }
+.wnote {
+  display: grid; grid-template-columns: 15px minmax(0, 1fr); gap: 7px;
+  font-size: 12.5px; color: var(--ink-2); margin-top: 8px;
+}
+.wnote i { font-style: normal; color: var(--warning); }
+
+/* ──────────────────────────────────────────────────────────────
+   СДЕЛКИ.
+
+   Одна разметка на настоящие и на виртуальные сделки: список у них
+   одинаковый, отличается один столбец — у настоящих есть деньги.
+   Число столбцов задаётся переменной, а не второй копией правил.
+   ────────────────────────────────────────────────────────────── */
+.trades { font-variant-numeric: tabular-nums; font-size: 12.5px;
+          --tr-cols: 50px 66px minmax(0, 1fr) 78px 70px 152px; }
+.trades.paper { --tr-cols: 50px 66px minmax(0, 1fr) 82px 150px; }
+.trades.scroll { max-height: 330px; overflow: auto; }
+.tr {
+  display: grid; grid-template-columns: var(--tr-cols); gap: 8px;
+  padding: 6px 0; border-top: 1px solid var(--grid); align-items: baseline;
+}
+.tr:first-child { border-top: 0; }
+.tr .tm { color: var(--ink-muted); }
+.tr .sd.buy { color: var(--buy); } .tr .sd.sell { color: var(--sell); }
+.tr .px { color: var(--ink-2); }
+.tr .bps, .tr .usd { text-align: right; font-weight: 500; }
+.tr .rs { color: var(--ink-muted); text-align: right;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Открытая позиция. Она одна, она важнее истории и поэтому не строка
+   в списке, а отдельная плашка с краем в цвет стороны. */
+.posbox {
+  border: 1px solid var(--border); border-left-width: 3px;
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;
+}
+.posbox.buy { border-left-color: var(--buy); }
+.posbox.sell { border-left-color: var(--sell); }
+.posbox .row { display: flex; justify-content: space-between; gap: 10px;
+               align-items: baseline; margin-bottom: 8px; flex-wrap: wrap; }
+.posbox .row b { font-size: 15px; }
+.posbox .kv { grid-template-columns: repeat(4, auto); justify-content: start;
+              gap: 2px 22px; }
+.posbox .kv dd { text-align: left; }
+
+/* Заявки — техника, а не деньги: в режиме новичка их не видно. */
+.ord { display: grid; grid-template-columns: 50px 1fr auto auto; gap: 8px;
+       padding: 5px 0; border-top: 1px solid var(--grid); font-size: 12.5px;
+       font-variant-numeric: tabular-nums; align-items: baseline; }
+.ord:first-child { border-top: 0; }
+.ord .st { color: var(--ink-2); }
+.ord .err { color: var(--sell); grid-column: 1 / -1; font-size: 11.5px; }
+
+@media (max-width: 559px) {
+  .wallet .big { font-size: 29px; }
+  .seg button { font-size: 12px; padding: 8px 6px; }
+  /* Сделка на телефоне — две строки: цифра результата справа сверху,
+     подробности под ней. Шесть столбцов на 360 px не читаются. */
+  .trades, .trades.paper { --tr-cols: 48px minmax(0, 1fr) auto; }
+  .tr { gap: 3px 8px; padding: 7px 0; }
+  .tr .tm { grid-area: 1 / 1; }
+  .tr .sd { grid-area: 1 / 2; }
+  .tr .usd { grid-area: 1 / 3; }
+  .tr .bps { grid-area: 2 / 3; }
+  .tr .px { grid-area: 2 / 1 / auto / 3; }
+  .tr .rs { grid-area: 3 / 1 / auto / 4; text-align: left; }
+  .trades.paper .tr .bps { grid-area: 1 / 3; }
+  .trades.paper .tr .px { grid-area: 2 / 1 / auto / 4; }
+  .trades.paper .tr .rs { grid-area: 3 / 1 / auto / 4; }
+  .posbox .kv { grid-template-columns: repeat(2, auto); }
+  .ord { grid-template-columns: 48px 1fr auto; }
+}
+
+/* ── «что если»: единственная форма с числами ─────────────────
+   Поля узкие и в одну сетку: их шесть, и на телефоне они обязаны
+   лечь в две колонки, а не в шесть строк. */
+.wi-form { display: grid; gap: 10px; margin-bottom: 12px;
+           grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+.wi-form label { font-size: 12px; color: var(--ink-2); display: grid; gap: 4px; }
+.wi-form input[type="number"] {
+  width: 100%; background: var(--plane); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px;
+  font: inherit; font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.wi-form input:focus { outline: 1px solid var(--accent); }
+.wi-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+          margin-bottom: 12px; }
+#wi-out .kv { margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>CashMash <span class="sym" id="sym">—</span></h1>
+  <div class="spacer"></div>
+  <button class="ghost" id="level">Режим: новичок</button>
+  <button class="ghost" id="theme">Тема</button>
+</header>
+
+<!-- ── кошелёк ──────────────────────────────────────────────
+     Первое, что видно на странице, — сколько денег на счету.
+     Всё остальное объясняет, что с ними происходит. -->
+<section class="card wallet" id="wallet" style="margin-bottom:var(--gap)">
+  <div class="empty">Смотрю счёт…</div>
+</section>
+
+<!-- ── что происходит прямо сейчас ─────────────────────────── -->
+<section class="card" id="status">
+  <div class="verdict">
+    <div class="dot" id="dot" style="background:var(--ink-muted)"></div>
+    <div class="verdict-text">
+      <strong id="verdict">Подключаюсь…</strong>
+      <span id="verdict-why"></span>
+    </div>
+  </div>
+  <div class="chips" id="chips"></div>
+</section>
+
+<!-- ── вкладки ─────────────────────────────────────────────── -->
+<nav class="tabs">
+  <div class="seg" id="seg">
+    <button data-tab="analytics"><span class="mark">◔</span>Аналитика</button>
+    <button data-tab="trade"><span class="mark">◆</span>Торговля</button>
+    <button data-tab="test"><span class="mark">◌</span>Тест</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════ АНАЛИТИКА ═══════════════════════════
+     Что происходит на рынке и что из этого видит робот.
+     Денег здесь нет ни одной строкой — это наблюдение. -->
+<div class="tab" id="tab-analytics">
+
+  <div class="wide" style="margin-bottom:var(--gap)">
+
+    <!-- ── цена ───────────────────────────────────────────── -->
+    <section class="card">
+      <h2>Цена</h2>
+      <p class="hint">Середина между лучшей покупкой и продажей. Линия — последние минуты.</p>
+      <div class="hero">
+        <span class="big" id="price">—</span>
+        <span class="delta" id="chg"></span>
+        <span class="delta" style="color:var(--ink-2)" id="spread"></span>
+      </div>
+      <div class="chart" id="spark">
+        <svg viewBox="0 0 900 280" id="sparksvg" role="img"
+             aria-label="Цена и уровни сделки"></svg>
+        <div class="tip" id="tip"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <!-- ── детекторы ──────────────────────────────────────── -->
+    <section class="card">
+      <h2>Что видят детекторы</h2>
+      <p class="hint">Шесть независимых мнений. Влево — за продажу, вправо — за покупку. Молчащий детектор выходит из расчёта, а не голосует нулём.</p>
+      <div id="dets"><div class="empty">Нет данных</div></div>
+      <div id="score" style="margin-top:12px"></div>
+    </section>
+  </div>
+
+  <div class="grid cols" style="margin-bottom:var(--gap)">
+
+    <!-- ── стакан ─────────────────────────────────────────── -->
+    <section class="card">
+      <h2>Стакан заявок</h2>
+      <p class="hint">Кто и сколько готов купить или продать. Длина полосы — объём на уровне.</p>
+      <div class="ladder" id="book"><div class="empty">Нет данных</div></div>
+    </section>
+
+    <!-- ── лента ──────────────────────────────────────────── -->
+    <section class="card">
+      <h2>Лента сделок</h2>
+      <p class="hint">Состоявшиеся сделки. Цвет — сторона того, кто ударил по рынку.</p>
+      <div id="flow" style="margin-bottom:10px"></div>
+      <div class="tape" id="tape"><div class="empty">Нет данных</div></div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-bottom:var(--gap)">
+    <h2>Новостной фон</h2>
+    <p class="hint">Что происходит вокруг инструмента. Новость может только
+      остановить торговлю — начать её она не может: как повод войти это был бы
+      непроверенный источник сигнала.</p>
+    <div id="news"><div class="empty">Наблюдатель не запущен</div></div>
+  </section>
+
+  <!-- ── разбор работы робота ─────────────────────────────── -->
+  <section class="card">
+    <h2>Разбор работы робота</h2>
+    <p class="hint">Локальная модель читает следы робота и объясняет, что
+      получилось и почему. В работу робота не вмешивается: команд отсюда
+      к нему не уходит. Числа считает Python, модель их только связывает —
+      число без источника снимается вместе с выводом.</p>
+    <div id="analyst"><div class="empty">Проверяю…</div></div>
+  </section>
+</div>
+
+<!-- ═══════════════════ ТОРГОВЛЯ ════════════════════════════
+     Настоящие деньги: что счёт, что сделки, что мешает войти. -->
+<div class="tab" id="tab-trade">
+
+  <!-- ── настоящие сделки ─────────────────────────────────── -->
+  <section class="card" style="margin-bottom:var(--gap)">
+    <h2>Реальные сделки</h2>
+    <p class="hint">То, что ушло на биржу и вернулось оттуда деньгами.
+      Пусто здесь — нормальное состояние, а не поломка: робот входит
+      редко и только когда сходятся все проверки.</p>
+    <div id="trades"><div class="empty">Проверяю…</div></div>
+  </section>
+
+  <div class="grid cols" style="margin-bottom:var(--gap)">
+
+    <!-- ── путь к сделке ──────────────────────────────────── -->
+    <section class="card">
+      <h2>Путь к сделке</h2>
+      <p class="hint">Робот входит, только когда пройдены все проверки. Первая невыполненная — и есть причина бездействия.</p>
+      <div id="gates"><div class="empty">Нет данных</div></div>
+    </section>
+
+    <!-- ── экономика ──────────────────────────────────────── -->
+    <section class="card">
+      <h2>Экономика круга</h2>
+      <p class="hint">Сколько стоит войти и выйти — и насколько цель это перекрывает. Главная причина, по которой сделки отсеиваются.</p>
+      <div class="eco" id="eco"><div class="empty">Нет данных</div></div>
+    </section>
+  </div>
+
+  <!-- ── счёт биржи ───────────────────────────────────────── -->
+  <section class="card" id="conn-card" style="margin-bottom:var(--gap)">
+    <h2>Подключение биржи</h2>
+    <p class="hint">Пока счёт не подключён, робот только наблюдает: сверить
+      состояние без ключа невозможно, а торговать без сверки нельзя.
+      Пароль от аккаунта Bybit роботу не нужен — только API-ключ.</p>
+    <div id="conn"><div class="empty">Проверяю…</div></div>
+  </section>
+
+  <section class="card">
+    <h2>События</h2>
+    <p class="hint">Алерты, ушедшие в Telegram.</p>
+    <div id="alerts"><div class="empty">Событий нет</div></div>
+  </section>
+</div>
+
+<!-- ═══════════════════ ТЕСТ ════════════════════════════════
+     Торговля без денег по живому потоку и проверка допущений,
+     на которых держится стратегия. Денег здесь нет, поэтому
+     ошибаться здесь можно и нужно. -->
+<div class="tab" id="tab-test">
+
+  <div class="grid cols" style="margin-bottom:var(--gap)">
+
+    <!-- ── виртуальная торговля ───────────────────────────── -->
+    <section class="card">
+      <h2>Виртуальная торговля</h2>
+      <p class="hint">Та же логика, тот же живой поток, но без денег.
+        Считает, что было бы, если бы робот торговал.</p>
+      <div id="paper"><div class="empty">Не запущена</div></div>
+    </section>
+
+    <!-- ── проверка предположений ─────────────────────────── -->
+    <section class="card">
+      <h2>Проверка предположений</h2>
+      <p class="hint">Каждая строка — допущение, на котором держится расчёт,
+        и то, чем оно оказалось на живом потоке. Это калибровка, а не
+        обучение: веса не подбираются — измеряется расхождение.</p>
+      <div id="checks"><div class="empty">Нет данных</div></div>
+    </section>
+  </div>
+
+  <!-- ── проверка предположений руками ────────────────────── -->
+  <section class="card" style="margin-bottom:var(--gap)">
+    <h2>Что если</h2>
+    <p class="hint">Те же проверки, что решают судьбу настоящей сделки, но на
+      числах, заданных руками. Считает их Python робота — тот самый гейт
+      издержек, что стоит в бою; браузер только показывает ответ. Роботу
+      отсюда ничего не уходит: подставленные числа он не увидит.</p>
+    <div id="whatif"><div class="empty">Готовлю…</div></div>
+  </section>
+
+  <!-- ── журнал виртуальных сделок ────────────────────────── -->
+  <section class="card">
+    <h2>Журнал виртуальных сделок</h2>
+    <p class="hint">Каждая закрытая виртуальная сделка: чем закрылась,
+      сколько принесла в bps и сколько держалась. Денег в них нет —
+      это измерение, а не результат.</p>
+    <div id="ptrades"><div class="empty">Нет данных</div></div>
+  </section>
+</div>
+
+<footer>
+  <span id="upd">—</span>
+  <span>Панель читает файлы и не отдаёт торговых команд. Единственное
+    исключение — подключение ключа биржи, и только с этой машины.</span>
+</footer>
+
+</div>
+<script src="/app.js"></script>
+<script>
+// Сервис-воркер работает только в защищённом контексте: localhost или
+// HTTPS. По локальной сети через обычный HTTP он не зарегистрируется —
+// и это не ошибка: установка на домашний экран и полноэкранный режим
+// обеспечиваются манифестом и мета-тегами, а не воркером.
+if ("serviceWorker" in navigator && window.isSecureContext) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

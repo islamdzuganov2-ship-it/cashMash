@@ -1,0 +1,52 @@
+# Секретов в файле нет: ключи приходят из ops/.env, который в .gitignore.
+services:
+  trader:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    image: cashmash:${CASHMASH_VERSION:-dev}
+    container_name: cashmash-trader
+    restart: unless-stopped
+    env_file: [.env]
+    volumes:
+      - ../data:/app/data
+      - ../config:/app/config:ro
+    # Только чтение корня: писать процессу нужно исключительно в /app/data.
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: "50m", max-file: "5"}
+
+  collector:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    image: cashmash:${CASHMASH_VERSION:-dev}
+    container_name: cashmash-collector
+    restart: unless-stopped
+    entrypoint: ["python", "research/collect_bybit.py"]
+    command: ["--symbol", "XRPUSDT"]
+    volumes:
+      - ../data:/app/data
+      - ../research:/app/research:ro
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+
+  alerts:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    image: cashmash:${CASHMASH_VERSION:-dev}
+    container_name: cashmash-alerts
+    restart: unless-stopped
+    entrypoint: ["python", "ops/alert_agent.py"]
+    env_file: [.env]
+    volumes:
+      - ../data:/app/data
+      - ../ops:/app/ops:ro
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
