@@ -380,34 +380,6 @@ footer { color: var(--ink-muted); font-size: 12px; margin-top: 18px;
          display: flex; gap: 12px; flex-wrap: wrap; }
 .beginner .pro { display: none; }
 
-/* Отчёт аналитика. Высота ограничена и прокручивается внутри: отчёт
-   бывает на несколько экранов, и без ограничения он выталкивает
-   остальные карточки за пределы страницы. */
-/* min-height здесь не украшение, а страховка. Единицы vh считаются от
-   высоты окна, а она не везде известна: во встроенном просмотрщике и
-   в WebView Android-приложения `innerHeight` бывает нулём, и тогда
-   `62vh` превращается в `0px` — отчёт схлопывается до одних полей, а
-   выглядит это как «панель сломалась». По правилам CSS min-height
-   сильнее max-height, поэтому при нулевом vh остаётся 240px с
-   прокруткой: некрасиво, но читаемо. */
-.an-report { margin-top: 14px; padding: 14px 16px; background: var(--bg);
-             border: 1px solid var(--border); border-radius: 8px;
-             max-height: 62vh; min-height: 240px;
-             overflow-y: auto; font-size: 13px; line-height: 1.55; }
-.an-report p { margin: 0 0 9px; }
-.an-report h3.an-h { font-size: 15px; margin: 16px 0 8px;
-                     padding-bottom: 5px; border-bottom: 1px solid var(--grid); }
-.an-report h4.an-h { font-size: 13px; margin: 14px 0 6px; color: var(--ink-2); }
-.an-report h5.an-h, .an-report h6.an-h { font-size: 12px; margin: 12px 0 5px;
-                     color: var(--ink-muted); text-transform: uppercase;
-                     letter-spacing: .04em; }
-.an-report ul.an-list { margin: 0 0 10px; padding-left: 18px; }
-.an-report ul.an-list li { margin: 0 0 7px; }
-.an-report blockquote { margin: 0 0 12px; padding: 9px 12px;
-             border-left: 3px solid var(--accent); background: var(--surface);
-             border-radius: 0 6px 6px 0; color: var(--ink-2); }
-.an-report code { font-size: 12px; }
-.an-report s { color: var(--ink-muted); }
 /* ──────────────────────────────────────────────────────────────
    ВКЛАДКИ.
 
@@ -656,16 +628,6 @@ footer { color: var(--ink-muted); font-size: 12px; margin-top: 18px;
       остановить торговлю — начать её она не может: как повод войти это был бы
       непроверенный источник сигнала.</p>
     <div id="news"><div class="empty">Наблюдатель не запущен</div></div>
-  </section>
-
-  <!-- ── разбор работы робота ─────────────────────────────── -->
-  <section class="card">
-    <h2>Разбор работы робота</h2>
-    <p class="hint">Локальная модель читает следы робота и объясняет, что
-      получилось и почему. В работу робота не вмешивается: команд отсюда
-      к нему не уходит. Числа считает Python, модель их только связывает —
-      число без источника снимается вместе с выводом.</p>
-    <div id="analyst"><div class="empty">Проверяю…</div></div>
   </section>
 </div>
 

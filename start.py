@@ -115,7 +115,7 @@ def main() -> None:
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--only", nargs="*",
                     choices=["collector", "trader", "alerts", "dashboard",
-                             "paper", "news", "analyst"],
+                             "paper", "news"],
                     help="поднять только часть процессов")
     args = ap.parse_args()
 

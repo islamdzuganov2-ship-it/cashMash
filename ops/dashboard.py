@@ -67,7 +67,6 @@ import socket
 import gzip
 import json
 import sqlite3
-import subprocess
 import sys
 import threading
 import time
@@ -301,9 +300,6 @@ class State:
             "news": news,
             "brain": self.brain.decide(now, hb, news),
             "paper": paper,
-            # Аналитик: разбор работы робота локальной моделью. Он
-            # ничего роботу не отправляет и в его работу не вмешивается.
-            "analyst": read_analyst_state(self.root),
             # Подключение счёта: только то, что видно из файлов, —
             # есть ли ключ и чем закончилась последняя его проверка.
             # Сама проверка идёт на бирже и запускается человеком.
@@ -348,70 +344,6 @@ def read_news_state(root: Path) -> dict | None:
         return None
     d["alive"] = (time.time() * 1000 - d.get("ts_ms", 0)) < 15 * 60_000
     return d
-
-
-def read_analyst_state(root: Path) -> dict:
-    """Состояние аналитика: готовность, последний разбор, отчёт.
-
-    Панель читает файлы, а не запускает проверки. Осмотр готовности
-    поднимает модель и стоит секунд; делать это при каждом обновлении
-    страницы — значит мешать роботу ради картинки. Файлы пишет сам
-    аналитик, и они всегда описывают последнее, что он делал.
-    """
-    out: dict = {"available": False, "state": "не запускался",
-                 "busy": False, "ready": None, "report": None}
-
-    hb_path = root / "data" / "heartbeat_analyst.json"
-    try:
-        hb = json.loads(hb_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        hb = {}
-    if hb:
-        out["available"] = True
-        age_ms = time.time() * 1000 - hb.get("ts_ms", 0)
-        out["state"] = str(hb.get("state", "?"))
-        # «Занят» — это свежий пульс в рабочем состоянии. Пульс
-        # недельной давности с надписью «разбор» означает, что процесс
-        # умер на середине, а не что он до сих пор считает.
-        out["busy"] = (age_ms < 120_000
-                       and out["state"] not in ("ожидание", "не готов",
-                                                "ошибка"))
-        out["alive"] = age_ms < 900_000
-        out["heartbeat"] = hb
-        out["grounding"] = hb.get("grounding")
-        out["last_run_utc"] = hb.get("last_run_utc")
-
-    rd = readiness_json(root)
-    if rd:
-        out["ready"] = bool(rd.get("ready"))
-        out["trained"] = bool(rd.get("trained"))
-        out["checks"] = rd.get("checks", [])
-        out["blockers"] = rd.get("blockers", [])
-        out["warnings"] = rd.get("warnings", [])
-        out["eval_score"] = rd.get("eval_score")
-        out["backend"] = rd.get("backend")
-        out["model"] = rd.get("model")
-        out["ts_utc"] = rd.get("ts_utc")
-
-    latest = root / "LLM" / "reports" / "latest.md"
-    try:
-        text = latest.read_text(encoding="utf-8")
-        out["report"] = {
-            "age_hours": round((time.time() - latest.stat().st_mtime) / 3600, 1),
-            "text": text[:60_000],
-        }
-    except OSError:
-        pass
-    return out
-
-
-def readiness_json(root: Path) -> dict:
-    try:
-        return json.loads(
-            (root / "LLM" / "state" / "readiness.json").read_text(
-                encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
 
 
 def read_bot_state(root: Path) -> dict:
@@ -1013,59 +945,6 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    # --- аналитик ------------------------------------------------------
-
-    def analyst(self, action: str) -> None:
-        """Запустить разбор, обучение или проверку качества.
-
-        Запуск отдельным процессом, и ответ уходит сразу. Разбор
-        занимает минуты: держать на нём HTTP-соединение значит
-        получить обрыв по таймауту у браузера и осиротевший процесс на
-        сервере. Панель следит за ходом по пульсу аналитика — тому же
-        файлу, по которому она следит за остальными службами.
-        """
-        if action not in ("run", "train", "check"):
-            self.reply(404, {"error": "нет такого действия"})
-            return
-
-        root = self.state.root
-        script = root / "ops" / "analyst.py"
-        if not script.exists():
-            self.reply(500, {"error": "ops/analyst.py не найден"})
-            return
-
-        state = read_analyst_state(root)
-        if state.get("busy"):
-            self.reply(409, {"error": "аналитик уже работает",
-                             "state": state.get("state")})
-            return
-
-        python = sys.executable
-        for rel in ("Scripts/python.exe", "bin/python"):
-            cand = root / ".venv" / rel
-            if cand.exists():
-                python = str(cand)
-                break
-
-        cmd = [python, str(script), "--root", str(root),
-               "--symbol", self.state.symbol, action]
-        flags = 0
-        if sys.platform == "win32":
-            flags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
-                     | getattr(subprocess, "DETACHED_PROCESS", 0))
-        log_path = root / "data" / "logs" / "analyst.log"
-        try:
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            sink = log_path.open("a", encoding="utf-8", errors="replace")
-            subprocess.Popen(cmd, cwd=str(root), creationflags=flags,
-                             stdout=sink, stderr=subprocess.STDOUT,
-                             stdin=subprocess.DEVNULL)
-        except OSError as exc:
-            self.reply(500, {"error": f"не удалось запустить: {exc}"})
-            return
-        self.reply(200, {"ok": True, "action": action,
-                         "note": "запущено; следите за карточкой"})
-
     def connect_allowed(self) -> str:
         """Пустая строка — можно. Иначе причина отказа, как есть.
 
@@ -1127,16 +1006,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         path = self.path.split("?")[0]
-
-        # Аналитик идёт до проверки connect_allowed и не подчиняется ей.
-        # Та проверка стережёт ввод ключей биржи: секрет, присланный по
-        # незашифрованному HTTP, виден всем на пути. Разбор не
-        # принимает секретов, не отправляет ордеров и ничего не меняет
-        # в роботе — запрещать его по тем же правилам было бы не
-        # осторожностью, а путаницей в том, что именно защищается.
-        if path.startswith("/api/analyst/"):
-            self.analyst(path.rsplit("/", 1)[-1])
-            return
 
         if path not in ("/api/exchange/connect", "/api/exchange/check",
                         "/api/exchange/forget"):
