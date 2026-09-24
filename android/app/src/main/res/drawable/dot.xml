@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Точка состояния. Цвет ставится кодом: зелёная — работает,
+     жёлтая — работает не всё, красная — остановлен. Цвет никогда не
+     остаётся единственным признаком: рядом всегда есть слово. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/text_dim" />
+    <size android:width="10dp" android:height="10dp" />
+</shape>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Вкладка «Панель»: та же страница, что на компьютере, во всю высоту.
+     Своего здесь только объяснение на случай, когда показывать нечего. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <WebView
+        android:id="@+id/panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:padding="24dp"
+        android:textSize="15sp"
+        android:lineSpacingMultiplier="1.3"
+        android:textColor="@color/text_dim"
+        android:text="@string/hint_stopped" />
+</FrameLayout>
